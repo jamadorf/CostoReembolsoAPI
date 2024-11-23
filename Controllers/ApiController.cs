@@ -3,6 +3,8 @@ using Oracle.ManagedDataAccess.Client;
 using System.Data;
 using CostoReembolsoAPI.Dtos;
 using Oracle.ManagedDataAccess.Types;
+using System.Data.Common;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace CostoReembolsoAPI.Controllers
 {
@@ -21,7 +23,7 @@ namespace CostoReembolsoAPI.Controllers
 
         private IDbConnection GetDbConnection()
         {
-            string connectionString = _configuration.GetConnectionString("OracleDbConnection");
+            string connectionString = _configuration.GetConnectionString("OracleDbConnection") ?? string.Empty;
             return new OracleConnection(connectionString);
         }
 
@@ -89,21 +91,18 @@ namespace CostoReembolsoAPI.Controllers
         public async Task<IActionResult> ObtenerTiposServicio([FromQuery] int servicio)
         {
             var response = new TipoServicioResponseDto();
-            string connectionString = _configuration.GetConnectionString("OracleDbConnection");
 
             try
             {
-                using (IDbConnection dbConnection = new OracleConnection(connectionString))
+                using(IDbConnection dbConnection = GetDbConnection())
                 {
                     dbConnection.Open();
                     using (var command = new OracleCommand("DBAPER.PKG_WEBSERVICES_PAG_AUX_MUTUO.P_OBTENER_TIPO_SERVICIO", (OracleConnection)dbConnection))
                     {
                         command.CommandType = CommandType.StoredProcedure;
 
-                        // Parámetros de entrada
                         command.Parameters.Add("IN_SERVICIO", OracleDbType.Int32).Value = servicio;
 
-                        // Parámetros de salida
                         command.Parameters.Add("OUT_TIPO_SERVICIO", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
                         command.Parameters.Add("OUT_ESTATUS", OracleDbType.Int32).Direction = ParameterDirection.Output;
                         command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2, 200).Direction = ParameterDirection.Output;
@@ -136,7 +135,7 @@ namespace CostoReembolsoAPI.Controllers
                 response.Estatus = 1;
                 response.Mensaje = "HA OCURRIDO UN ERROR, FAVOR REVISAR LOS LOGS.";
                 response.TiposServicios = new List<TipoServicioDto>();
-                return Content(response.Mensaje); // Devuelve solo el mensaje de error como texto plano
+                return Content(response.Mensaje);
             }
             catch (Exception ex)
             {
@@ -144,10 +143,10 @@ namespace CostoReembolsoAPI.Controllers
                 response.Estatus = 1;
                 response.Mensaje = "HA OCURRIDO UN ERROR, FAVOR REVISAR LOS LOGS.";
                 response.TiposServicios = new List<TipoServicioDto>();
-                return Content(response.Mensaje); // Devuelve solo el mensaje de error como texto plano
+                return Content(response.Mensaje);
             }
 
-            return Ok(response);  // Si todo es correcto, retorna el JSON
+            return Ok(response);
         }
 
         [HttpGet("validar-cobertura")]
@@ -157,7 +156,6 @@ namespace CostoReembolsoAPI.Controllers
 
             try
             {
-                // Usamos el método GetDbConnection para obtener la conexión a la base de datos
                 using (IDbConnection dbConnection = GetDbConnection())
                 {
                     dbConnection.Open();
@@ -166,31 +164,25 @@ namespace CostoReembolsoAPI.Controllers
                     {
                         command.CommandType = CommandType.StoredProcedure;
 
-                        // Parámetros de entrada
                         command.Parameters.Add("IN_SERVICIO", OracleDbType.Int32).Value = servicio;
                         command.Parameters.Add("IN_TIPO_COBERTURA", OracleDbType.Int32).Value = tipoCobertura;
                         command.Parameters.Add("IN_COBERTURA", OracleDbType.Varchar2).Value = cobertura;
 
-                        // Parámetros de salida
                         command.Parameters.Add("OUT_DESCRIPCION_CPT", OracleDbType.Varchar2, 200).Direction = ParameterDirection.Output;
                         command.Parameters.Add("OUT_ESTATUS", OracleDbType.Int32).Direction = ParameterDirection.Output;
                         command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2, 200).Direction = ParameterDirection.Output;
                         command.Parameters.Add("OUT_SERVICIO_TIPO_COBERTURA", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
 
-                        // Ejecutamos el procedimiento
                         await command.ExecuteNonQueryAsync();
 
-                        // Recuperamos los valores de los parámetros de salida
                         response.Estatus = int.Parse(command.Parameters["OUT_ESTATUS"].Value.ToString());
                         response.Mensaje = command.Parameters["OUT_MENSAJE"].Value?.ToString() ?? string.Empty;
                         response.DescripcionCPT = command.Parameters["OUT_DESCRIPCION_CPT"].Value?.ToString() ?? string.Empty;
 
-                        // Procesamos los resultados según el estatus
                         if (response.Estatus == 0)
                         {
                             if (response.DescripcionCPT.Equals("null"))
                             {
-                                // Si no existe la descripción CPT, llenamos el listado de ServiciosTiposCobertura
                                 response.ServiciosTiposCobertura = new List<ServicioTipoCoberturaDto>();
 
                                 using (var reader = ((OracleRefCursor)command.Parameters["OUT_SERVICIO_TIPO_COBERTURA"].Value).GetDataReader())
@@ -199,10 +191,9 @@ namespace CostoReembolsoAPI.Controllers
                                     {
                                         response.ServiciosTiposCobertura.Add(new ServicioTipoCoberturaDto
                                         {
-                                            // Aseguramos que las conversiones de OracleDecimal sean explícitas
-                                            Servicio = reader.IsDBNull(0) ? 0 : Convert.ToInt32(reader.GetValue(0)), // Convertimos a int
+                                            Servicio = reader.IsDBNull(0) ? 0 : Convert.ToInt32(reader.GetValue(0)),
                                             DescripcionServicio = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                                            TipoCobertura = reader.IsDBNull(2) ? 0 : Convert.ToInt32(reader.GetValue(2)), // Convertimos a int
+                                            TipoCobertura = reader.IsDBNull(2) ? 0 : Convert.ToInt32(reader.GetValue(2)),
                                             DescripcionTipoCobertura = reader.IsDBNull(3) ? string.Empty : reader.GetString(3)
                                         });
                                     }
@@ -212,7 +203,6 @@ namespace CostoReembolsoAPI.Controllers
                             }
                             else
                             {
-                                // Si existe la descripción CPT, solo retornamos los valores y mensaje OK
                                 response.ServiciosTiposCobertura = new List<ServicioTipoCoberturaDto>();
                                 response.Mensaje = "OK";
                             }
@@ -247,22 +237,19 @@ namespace CostoReembolsoAPI.Controllers
 
             try
             {
-                // Usamos el método genérico para obtener la conexión
                 using (IDbConnection dbConnection = GetDbConnection())
                 {
-                    dbConnection.Open(); // Abrimos la conexión asincrónicamente
+                    dbConnection.Open();
 
                     using (var command = new OracleCommand("DBAPER.PKG_WEBSERVICES_PAG_AUX_MUTUO.P_SOMETER_COBERTURA", (OracleConnection)dbConnection))
                     {
                         command.CommandType = CommandType.StoredProcedure;
 
-                        // Parámetros de entrada
                         command.Parameters.Add("IN_SERVICIO", OracleDbType.Int32).Value = servicio;
                         command.Parameters.Add("IN_TIPO_COBERTURA", OracleDbType.Int32).Value = tipoCobertura;
                         command.Parameters.Add("IN_COBERTURA", OracleDbType.Varchar2).Value = cobertura;
                         command.Parameters.Add("IN_VALOR_PROVEEDOR_FUERA_RED", OracleDbType.Decimal).Value = valorProveedorFueraRed;
 
-                        // Parámetros de salida
                         command.Parameters.Add("OUT_MATRIZ_COBERTURA", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
                         command.Parameters.Add("OUT_REEMBOLSO_PROV_FUERA_RED", OracleDbType.Decimal).Direction = ParameterDirection.Output;
                         command.Parameters.Add("OUT_COSTO_PROVEEDOR_FUERA_RED", OracleDbType.Decimal).Direction = ParameterDirection.Output;
@@ -271,11 +258,9 @@ namespace CostoReembolsoAPI.Controllers
 
                         await command.ExecuteNonQueryAsync();
 
-                        // Asignar los valores de los parámetros de salida a la respuesta
                         response.Estatus = int.Parse(command.Parameters["OUT_ESTATUS"].Value.ToString());
                         response.Mensaje = command.Parameters["OUT_MENSAJE"].Value.ToString();
 
-                        // Si el estatus es 0, continuar procesando la respuesta
                         if (response.Estatus == 0)
                         {
                             response.ReembolsoProveedorFueraRed = Convert.ToDecimal(command.Parameters["OUT_REEMBOLSO_PROV_FUERA_RED"].Value);
@@ -301,7 +286,6 @@ namespace CostoReembolsoAPI.Controllers
                         }
                         else
                         {
-                            // Si el estatus es distinto de 0, solo se retorna el mensaje de error
                             response.ReembolsoProveedorFueraRed = 0;
                             response.CostoProveedorFueraRed = 0;
                             response.MatrizCobertura = new List<MatrizCoberturaDto>();
@@ -317,7 +301,7 @@ namespace CostoReembolsoAPI.Controllers
                 response.MatrizCobertura = new List<MatrizCoberturaDto>();
                 response.ReembolsoProveedorFueraRed = 0;
                 response.CostoProveedorFueraRed = 0;
-                return Content(response.Mensaje); // Devuelve solo el mensaje de error como texto plano
+                return Content(response.Mensaje);
             }
             catch (Exception ex)
             {
@@ -327,21 +311,18 @@ namespace CostoReembolsoAPI.Controllers
                 response.MatrizCobertura = new List<MatrizCoberturaDto>();
                 response.ReembolsoProveedorFueraRed = 0;
                 response.CostoProveedorFueraRed = 0;
-                return Content(response.Mensaje); // Devuelve solo el mensaje de error como texto plano
+                return Content(response.Mensaje);
             }
 
-            return Ok(response);  // Si todo es correcto, retorna el JSON
+            return Ok(response);
         }
 
         [HttpGet("probar-conexion")]
         public IActionResult ProbarConexion()
         {
-            string connectionString = _configuration.GetConnectionString("OracleDbConnection");
-
             try
             {
-                using (IDbConnection dbConnection = new OracleConnection(connectionString))
-                {
+                using(IDbConnection dbConnection = GetDbConnection()){
                     dbConnection.Open();
                     return Ok("Conexión a la base de datos exitosa.");
                 }
