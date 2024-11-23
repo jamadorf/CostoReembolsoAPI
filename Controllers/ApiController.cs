@@ -3,8 +3,6 @@ using Oracle.ManagedDataAccess.Client;
 using System.Data;
 using CostoReembolsoAPI.Dtos;
 using Oracle.ManagedDataAccess.Types;
-using System.Data.Common;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace CostoReembolsoAPI.Controllers
 {
