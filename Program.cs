@@ -7,6 +7,8 @@ string oracleConnectionString = builder.Configuration.GetConnectionString("Oracl
 
 builder.Services.AddSingleton(new DatabaseService(oracleConnectionString));
 
+builder.Services.AddSingleton(new LogService(oracleConnectionString));
+
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();

@@ -3,7 +3,7 @@ using Oracle.ManagedDataAccess.Client;
 using System.Data;
 using CostoReembolsoAPI.Dtos;
 using Oracle.ManagedDataAccess.Types;
-using System.Text;
+using CostoReembolsoAPI.Common;
 
 namespace CostoReembolsoAPI.Controllers
 {
@@ -12,12 +12,14 @@ namespace CostoReembolsoAPI.Controllers
     public class ApiController : ControllerBase
     {
         private readonly IConfiguration _configuration;
-        private readonly ILogger<ApiController> _logger;
+        private readonly LogService _logService;
+        private long transaccionId;
+        private string DatosObjetoConsumido;
 
-        public ApiController(IConfiguration configuration, ILogger<ApiController> logger)
+        public ApiController(IConfiguration configuration, LogService logService)
         {
             _configuration = configuration;
-            _logger = logger;
+            _logService = logService;
         }
 
         private IDbConnection GetDbConnection()
@@ -36,7 +38,7 @@ namespace CostoReembolsoAPI.Controllers
                 using (IDbConnection dbConnection = GetDbConnection())
                 {
                     dbConnection.Open();
-                    using (var command = new OracleCommand("DBAPER.PKG_WEBSERVICES_PAG_AUX_MUTUO.P_OBTENER_CATEGORIA_SERVICIO", (OracleConnection)dbConnection))
+                    using (var command = new OracleCommand(Constants.ObtenerCategoriaServicio, (OracleConnection)dbConnection))
                     {
                         command.CommandType = CommandType.StoredProcedure;
 
@@ -48,6 +50,15 @@ namespace CostoReembolsoAPI.Controllers
 
                         response.Estatus = int.Parse(command.Parameters["OUT_ESTATUS"].Value.ToString());
                         response.Mensaje = command.Parameters["OUT_MENSAJE"].Value.ToString();
+
+                        DatosObjetoConsumido = $@"
+                        BEGIN
+                            {Constants.ObtenerCategoriaServicio} (
+                                OUT_CATEGORIA_SERVICIO => :OUT_CATEGORIA_SERVICIO,
+                                OUT_ESTATUS => {response.Estatus},
+                                OUT_MENSAJE => '{response.Mensaje}'
+                            );
+                        END;";
 
                         if (response.Estatus == 0)
                         {
@@ -68,19 +79,19 @@ namespace CostoReembolsoAPI.Controllers
             }
             catch (OracleException ex)
             {
-                _logger.LogError($"Error al ejecutar el procedimiento almacenado: {ex.Message}");
+                _logService.RegistrarLog(Constants.ObtenerCategoriaServicio, "I", $"Error al ejecutar el procedimiento almacenado: {ex.Message} {DatosObjetoConsumido}", out transaccionId);
                 response.Estatus = 1;
-                response.Mensaje = "HA OCURRIDO UN ERROR, FAVOR REVISAR LOS LOGS.";
+                response.Mensaje = Constants.ErrorLlamandoPlsql;
                 response.CategoriasServicio = new List<CategoriaServicioDto>();
-                return Content(response.Mensaje);
+                return StatusCode(500, response);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error inesperado: {ex.Message}");
+                _logService.RegistrarLog(Constants.ObtenerCategoriaServicio, "I", $"Error inesperado: {ex.Message} {DatosObjetoConsumido}", out transaccionId);
                 response.Estatus = 1;
-                response.Mensaje = "HA OCURRIDO UN ERROR, FAVOR REVISAR LOS LOGS.";
+                response.Mensaje = Constants.ErrorInesperado;
                 response.CategoriasServicio = new List<CategoriaServicioDto>();
-                return Content(response.Mensaje);
+                return StatusCode(500, response);
             }
 
             return Ok(response);
@@ -96,7 +107,7 @@ namespace CostoReembolsoAPI.Controllers
                 using(IDbConnection dbConnection = GetDbConnection())
                 {
                     dbConnection.Open();
-                    using (var command = new OracleCommand("DBAPER.PKG_WEBSERVICES_PAG_AUX_MUTUO.P_OBTENER_TIPO_SERVICIO", (OracleConnection)dbConnection))
+                    using (var command = new OracleCommand(Constants.ObtenerTipoServicio, (OracleConnection)dbConnection))
                     {
                         command.CommandType = CommandType.StoredProcedure;
 
@@ -110,6 +121,16 @@ namespace CostoReembolsoAPI.Controllers
 
                         response.Estatus = int.Parse(command.Parameters["OUT_ESTATUS"].Value.ToString());
                         response.Mensaje = command.Parameters["OUT_MENSAJE"].Value.ToString();
+
+                        DatosObjetoConsumido = $@"
+                        BEGIN
+                            {Constants.ObtenerTipoServicio} (
+                                IN_SERVICIO => {servicio},
+                                OUT_TIPO_SERVICIO => :OUT_TIPO_SERVICIO,
+                                OUT_ESTATUS => {response.Estatus},
+                                OUT_MENSAJE => '{response.Mensaje}'
+                            );
+                        END;";
 
                         if (response.Estatus == 0)
                         {
@@ -130,19 +151,19 @@ namespace CostoReembolsoAPI.Controllers
             }
             catch (OracleException ex)
             {
-                _logger.LogError($"Error al ejecutar el procedimiento almacenado: {ex.Message}");
+                _logService.RegistrarLog(Constants.ObtenerTipoServicio, "I", $"Error al ejecutar el procedimiento almacenado: {ex.Message} {DatosObjetoConsumido}", out transaccionId);
                 response.Estatus = 1;
-                response.Mensaje = "HA OCURRIDO UN ERROR, FAVOR REVISAR LOS LOGS.";
+                response.Mensaje = Constants.ErrorLlamandoPlsql;
                 response.TiposServicios = new List<TipoServicioDto>();
-                return Content(response.Mensaje);
+                return StatusCode(500, response);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error inesperado: {ex.Message}");
+                _logService.RegistrarLog(Constants.ObtenerTipoServicio, "I", $"Error inesperado: {ex.Message} {DatosObjetoConsumido}", out transaccionId);
                 response.Estatus = 1;
-                response.Mensaje = "HA OCURRIDO UN ERROR, FAVOR REVISAR LOS LOGS.";
+                response.Mensaje = Constants.ErrorInesperado;
                 response.TiposServicios = new List<TipoServicioDto>();
-                return Content(response.Mensaje);
+                return StatusCode(500, response);
             }
 
             return Ok(response);
@@ -159,7 +180,7 @@ namespace CostoReembolsoAPI.Controllers
                 {
                     dbConnection.Open();
 
-                    using (var command = new OracleCommand("DBAPER.PKG_WEBSERVICES_PAG_AUX_MUTUO.P_OBTENER_COBERTURA_SALUD", (OracleConnection)dbConnection))
+                    using (var command = new OracleCommand(Constants.ObtenerCoberturaSalud, (OracleConnection)dbConnection))
                     {
                         command.CommandType = CommandType.StoredProcedure;
 
@@ -177,6 +198,19 @@ namespace CostoReembolsoAPI.Controllers
                         response.Estatus = int.Parse(command.Parameters["OUT_ESTATUS"].Value.ToString());
                         response.Mensaje = command.Parameters["OUT_MENSAJE"].Value?.ToString() ?? string.Empty;
                         response.DescripcionCPT = command.Parameters["OUT_DESCRIPCION_CPT"].Value?.ToString() ?? string.Empty;
+
+                        DatosObjetoConsumido = $@"
+                        BEGIN
+                            {Constants.ObtenerCoberturaSalud} (
+                                IN_SERVICIO => {servicio},
+                                IN_TIPO_COBERTURA => {tipoCobertura},
+                                IN_COBERTURA => '{cobertura}',
+                                OUT_DESCRIPCION_CPT => '{response.DescripcionCPT}',
+                                OUT_ESTATUS => {response.Estatus},
+                                OUT_MENSAJE => '{response.Mensaje}',
+                                OUT_SERVICIO_TIPO_COBERTURA => :OUT_SERVICIO_TIPO_COBERTURA
+                            );
+                        END;";
 
                         if (response.Estatus == 0)
                         {
@@ -211,19 +245,19 @@ namespace CostoReembolsoAPI.Controllers
             }
             catch (OracleException ex)
             {
-                _logger.LogError($"Error al ejecutar el procedimiento almacenado: {ex.Message}");
+                _logService.RegistrarLog(Constants.ObtenerCoberturaSalud, "I", $"Error al ejecutar el procedimiento almacenado: {ex.Message} {DatosObjetoConsumido}", out transaccionId);
                 response.Estatus = 1;
-                response.Mensaje = "HA OCURRIDO UN ERROR, FAVOR REVISAR LOS LOGS.";
+                response.Mensaje = Constants.ErrorLlamandoPlsql;
                 response.ServiciosTiposCobertura = new List<ServicioTipoCoberturaDto>();
-                return Content(response.Mensaje);
+                return StatusCode(500, response);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error inesperado: {ex.Message}");
+                _logService.RegistrarLog(Constants.ObtenerCoberturaSalud, "I", $"Error inesperado: {ex.Message} {DatosObjetoConsumido}", out transaccionId);
                 response.Estatus = 1;
-                response.Mensaje = "HA OCURRIDO UN ERROR, FAVOR REVISAR LOS LOGS.";
+                response.Mensaje = Constants.ErrorInesperado;
                 response.ServiciosTiposCobertura = new List<ServicioTipoCoberturaDto>();
-                return Content(response.Mensaje);
+                return StatusCode(500, response);
             }
 
             return Ok(response);
@@ -239,7 +273,7 @@ namespace CostoReembolsoAPI.Controllers
                 {
                     dbConnection.Open();
 
-                    using (var command = new OracleCommand("DBAPER.PKG_WEBSERVICES_PAG_AUX_MUTUO.P_SOMETER_COBERTURA", (OracleConnection)dbConnection))
+                    using (var command = new OracleCommand(Constants.SometerCobertura, (OracleConnection)dbConnection))
                     {
                         command.CommandType = CommandType.StoredProcedure;
 
@@ -288,31 +322,43 @@ namespace CostoReembolsoAPI.Controllers
                         }
                         else
                         {
+                            response.ReembolsoProveedorFueraRed = string.Empty;
+                            response.CostoProveedorFueraRed = string.Empty;
                             response.MatrizCobertura = new List<MatrizCoberturaDto>();
                         }
 
-                        _logger.LogInformation($"OUT_REEMBOLSO_PROV_FUERA_RED: {response.ReembolsoProveedorFueraRed}");
-                        _logger.LogInformation($"OUT_COSTO_PROVEEDOR_FUERA_RED: {response.CostoProveedorFueraRed}");
-                        _logger.LogInformation($"OUT_ESTATUS: {response.Estatus}");
-                        _logger.LogInformation($"OUT_MENSAJE: {response.Mensaje}");
+                        DatosObjetoConsumido = $@"
+                        BEGIN
+                            {Constants.SometerCobertura} (
+                                IN_SERVICIO => {servicio},
+                                IN_TIPO_COBERTURA => {tipoCobertura},
+                                IN_COBERTURA => '{cobertura}',
+                                IN_VALOR_PROVEEDOR_FUERA_RED => {valorProveedorFueraRed},
+                                OUT_MATRIZ_COBERTURA => :OUT_MATRIZ_COBERTURA,
+                                OUT_REEMBOLSO_PROV_FUERA_RED => '{response.ReembolsoProveedorFueraRed}',
+                                OUT_COSTO_PROVEEDOR_FUERA_RED => '{response.CostoProveedorFueraRed}',
+                                OUT_ESTATUS => {response.Estatus},
+                                OUT_MENSAJE => '{response.Mensaje}'
+                            );
+                        END;";
                     }
                 }
             }
             catch (OracleException ex)
             {
-                _logger.LogError($"Error al ejecutar el procedimiento almacenado: {ex.Message}");
+                _logService.RegistrarLog(Constants.SometerCobertura, "I", $"Error al ejecutar el procedimiento almacenado: {ex.Message} {DatosObjetoConsumido}", out transaccionId);
                 response.Estatus = 1;
-                response.Mensaje = "HA OCURRIDO UN ERROR, FAVOR REVISAR LOS LOGS.";
+                response.Mensaje = Constants.ErrorLlamandoPlsql;
                 response.MatrizCobertura = new List<MatrizCoberturaDto>();
-                return Content(response.Mensaje);
+                return StatusCode(500, response);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error inesperado: {ex.Message}");
+                _logService.RegistrarLog(Constants.SometerCobertura, "I", $"Error inesperado: {ex.Message} {DatosObjetoConsumido}", out transaccionId);
                 response.Estatus = 1;
-                response.Mensaje = "HA OCURRIDO UN ERROR, FAVOR REVISAR LOS LOGS.";
+                response.Mensaje = Constants.ErrorInesperado;
                 response.MatrizCobertura = new List<MatrizCoberturaDto>();
-                return Content(response.Mensaje);
+                return StatusCode(500, response);
             }
 
             return Ok(response);
@@ -330,12 +376,10 @@ namespace CostoReembolsoAPI.Controllers
             }
             catch (OracleException ex)
             {
-                _logger.LogError($"Error al conectar con Oracle: {ex.Message}");
                 return StatusCode(500, $"Error al conectar con Oracle: {ex.Message}");
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error inesperado: {ex.Message}");
                 return StatusCode(500, $"Error inesperado: {ex.Message}");
             }
         }
