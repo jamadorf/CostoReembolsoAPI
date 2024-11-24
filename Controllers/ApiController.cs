@@ -3,6 +3,7 @@ using Oracle.ManagedDataAccess.Client;
 using System.Data;
 using CostoReembolsoAPI.Dtos;
 using Oracle.ManagedDataAccess.Types;
+using System.Text;
 
 namespace CostoReembolsoAPI.Controllers
 {
@@ -232,7 +233,6 @@ namespace CostoReembolsoAPI.Controllers
         public async Task<IActionResult> CoberturaSometer([FromQuery] int servicio, [FromQuery] int tipoCobertura, [FromQuery] string cobertura, [FromQuery] decimal valorProveedorFueraRed)
         {
             var response = new SometerCoberturaResponseDto();
-
             try
             {
                 using (IDbConnection dbConnection = GetDbConnection())
@@ -249,8 +249,8 @@ namespace CostoReembolsoAPI.Controllers
                         command.Parameters.Add("IN_VALOR_PROVEEDOR_FUERA_RED", OracleDbType.Decimal).Value = valorProveedorFueraRed;
 
                         command.Parameters.Add("OUT_MATRIZ_COBERTURA", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
-                        command.Parameters.Add("OUT_REEMBOLSO_PROV_FUERA_RED", OracleDbType.Decimal).Direction = ParameterDirection.Output;
-                        command.Parameters.Add("OUT_COSTO_PROVEEDOR_FUERA_RED", OracleDbType.Decimal).Direction = ParameterDirection.Output;
+                        command.Parameters.Add("OUT_REEMBOLSO_PROV_FUERA_RED", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
+                        command.Parameters.Add("OUT_COSTO_PROVEEDOR_FUERA_RED", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
                         command.Parameters.Add("OUT_ESTATUS", OracleDbType.Int32).Direction = ParameterDirection.Output;
                         command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2, 4000).Direction = ParameterDirection.Output;
 
@@ -261,33 +261,40 @@ namespace CostoReembolsoAPI.Controllers
 
                         if (response.Estatus == 0)
                         {
-                            response.ReembolsoProveedorFueraRed = Convert.ToDecimal(command.Parameters["OUT_REEMBOLSO_PROV_FUERA_RED"].Value);
-                            response.CostoProveedorFueraRed = Convert.ToDecimal(command.Parameters["OUT_COSTO_PROVEEDOR_FUERA_RED"].Value);
-
                             var matrizCobertura = new List<MatrizCoberturaDto>();
 
-                            using (var reader = ((OracleRefCursor)command.Parameters["OUT_MATRIZ_COBERTURA"].Value).GetDataReader())
+                            var refCursor = command.Parameters["OUT_MATRIZ_COBERTURA"].Value as OracleRefCursor;
+                            if (refCursor != null)
                             {
-                                while (reader.Read())
+                                using (var reader = refCursor.GetDataReader())
                                 {
-                                    matrizCobertura.Add(new MatrizCoberturaDto
+                                    while (await reader.ReadAsync())
                                     {
-                                        Tipo = reader.GetString(0),
-                                        Minimo = reader.GetDecimal(1),
-                                        Maximo = reader.GetDecimal(2),
-                                        Average = reader.GetDecimal(3)
-                                    });
+                                        matrizCobertura.Add(new MatrizCoberturaDto
+                                        {
+                                            Tipo = reader.GetString(0),
+                                            Minimo = reader.GetDecimal(1),
+                                            Maximo = reader.GetDecimal(2),
+                                            Average = reader.GetDecimal(3)
+                                        });
+                                    }
                                 }
                             }
 
                             response.MatrizCobertura = matrizCobertura;
+
+                            response.ReembolsoProveedorFueraRed = command.Parameters["OUT_REEMBOLSO_PROV_FUERA_RED"].Value?.ToString();
+                            response.CostoProveedorFueraRed = command.Parameters["OUT_COSTO_PROVEEDOR_FUERA_RED"].Value?.ToString();
                         }
                         else
                         {
-                            response.ReembolsoProveedorFueraRed = 0;
-                            response.CostoProveedorFueraRed = 0;
                             response.MatrizCobertura = new List<MatrizCoberturaDto>();
                         }
+
+                        _logger.LogInformation($"OUT_REEMBOLSO_PROV_FUERA_RED: {response.ReembolsoProveedorFueraRed}");
+                        _logger.LogInformation($"OUT_COSTO_PROVEEDOR_FUERA_RED: {response.CostoProveedorFueraRed}");
+                        _logger.LogInformation($"OUT_ESTATUS: {response.Estatus}");
+                        _logger.LogInformation($"OUT_MENSAJE: {response.Mensaje}");
                     }
                 }
             }
@@ -297,8 +304,6 @@ namespace CostoReembolsoAPI.Controllers
                 response.Estatus = 1;
                 response.Mensaje = "HA OCURRIDO UN ERROR, FAVOR REVISAR LOS LOGS.";
                 response.MatrizCobertura = new List<MatrizCoberturaDto>();
-                response.ReembolsoProveedorFueraRed = 0;
-                response.CostoProveedorFueraRed = 0;
                 return Content(response.Mensaje);
             }
             catch (Exception ex)
@@ -307,8 +312,6 @@ namespace CostoReembolsoAPI.Controllers
                 response.Estatus = 1;
                 response.Mensaje = "HA OCURRIDO UN ERROR, FAVOR REVISAR LOS LOGS.";
                 response.MatrizCobertura = new List<MatrizCoberturaDto>();
-                response.ReembolsoProveedorFueraRed = 0;
-                response.CostoProveedorFueraRed = 0;
                 return Content(response.Mensaje);
             }
 
