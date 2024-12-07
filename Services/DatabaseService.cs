@@ -2,18 +2,11 @@
 {
     using Oracle.ManagedDataAccess.Client;
 
-    public class DatabaseService
+    public class DatabaseService(string connectionString)
     {
-        private readonly string _connectionString;
-
-        public DatabaseService(string connectionString)
-        {
-            _connectionString = connectionString;
-        }
-
         public void TestConnection()
         {
-            using var connection = new OracleConnection(_connectionString);
+            using var connection = new OracleConnection(connectionString);
             connection.Open();
             Console.WriteLine("Connected to Oracle Database!");
         }

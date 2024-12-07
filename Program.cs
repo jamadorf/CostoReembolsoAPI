@@ -3,7 +3,7 @@ using CostoReembolsoAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-string oracleConnectionString = builder.Configuration.GetConnectionString("OracleDbConnection");
+string oracleConnectionString = builder.Configuration.GetConnectionString("OracleDbConnection")!;
 
 builder.Services.AddSingleton(new DatabaseService(oracleConnectionString));
 

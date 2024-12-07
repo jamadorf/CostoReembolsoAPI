@@ -10,6 +10,6 @@
     {
         public int Estatus { get; set; }
         public string Mensaje { get; set; } = string.Empty;
-        public List<CategoriaServicioDto> CategoriasServicio { get; set; } = new List<CategoriaServicioDto>();
+        public List<CategoriaServicioDto> CategoriasServicio { get; set; } = [];
     }
 }

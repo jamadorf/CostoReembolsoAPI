@@ -16,6 +16,6 @@ namespace CostoReembolsoAPI.Dtos
         public string Mensaje { get; set; } = string.Empty;
         public decimal ReembolsoProveedorFueraRed { get; set; }
         public decimal CostoProveedorFueraRed { get; set; }
-        public List<MatrizCoberturaDto> MatrizCobertura { get; set; } = new List<MatrizCoberturaDto>();
+        public List<MatrizCoberturaDto> MatrizCobertura { get; set; } = [];
     }
 }

@@ -13,6 +13,6 @@
         public int Estatus { get; set; }
         public string Mensaje { get; set; } = string.Empty;
         public string DescripcionCPT { get; set; } = string.Empty;
-        public List<ServicioTipoCoberturaDto> ServiciosTiposCobertura { get; set; } = new List<ServicioTipoCoberturaDto>();
+        public List<ServicioTipoCoberturaDto> ServiciosTiposCobertura { get; set; } = [];
     }
 }
