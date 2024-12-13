@@ -38,7 +38,7 @@ namespace CostoReembolsoAPI.Controllers
 
                 command.Parameters.Add("OUT_CATEGORIA_SERVICIO", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_ESTATUS", OracleDbType.Int32).Direction = ParameterDirection.Output;
-                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2, 1000).Direction = ParameterDirection.Output;
 
                 await command.ExecuteNonQueryAsync();
 
@@ -111,7 +111,7 @@ namespace CostoReembolsoAPI.Controllers
 
                 command.Parameters.Add("OUT_TIPO_SERVICIO", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_ESTATUS", OracleDbType.Int32).Direction = ParameterDirection.Output;
-                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2, 1000).Direction = ParameterDirection.Output;
 
                 await command.ExecuteNonQueryAsync();
 
@@ -184,11 +184,11 @@ namespace CostoReembolsoAPI.Controllers
 
                 command.Parameters.Add("IN_SERVICIO", OracleDbType.Int32).Value = servicio;
                 command.Parameters.Add("IN_TIPO_COBERTURA", OracleDbType.Int32).Value = tipoCobertura;
-                command.Parameters.Add("IN_COBERTURA", OracleDbType.Varchar2).Value = cobertura;
+                command.Parameters.Add("IN_COBERTURA", OracleDbType.Varchar2, 20).Value = cobertura;
 
-                command.Parameters.Add("OUT_DESCRIPCION_CPT", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_DESCRIPCION_CPT", OracleDbType.Varchar2, 300).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_ESTATUS", OracleDbType.Int32).Direction = ParameterDirection.Output;
-                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2, 1000).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_SERVICIO_TIPO_COBERTURA", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
 
                 await command.ExecuteNonQueryAsync();
@@ -264,14 +264,14 @@ namespace CostoReembolsoAPI.Controllers
 
                 command.Parameters.Add("IN_SERVICIO", OracleDbType.Int32).Value = servicio;
                 command.Parameters.Add("IN_TIPO_COBERTURA", OracleDbType.Int32).Value = tipoCobertura;
-                command.Parameters.Add("IN_COBERTURA", OracleDbType.Varchar2).Value = cobertura;
+                command.Parameters.Add("IN_COBERTURA", OracleDbType.Varchar2, 20).Value = cobertura;
                 command.Parameters.Add("IN_VALOR_PROVEEDOR_FUERA_RED", OracleDbType.Int32).Value = valorProveedorFueraRed;
 
                 command.Parameters.Add("OUT_MATRIZ_COBERTURA", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_REEMBOLSO_PROV_FUERA_RED", OracleDbType.Int32).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_COSTO_PROVEEDOR_FUERA_RED", OracleDbType.Int32).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_ESTATUS", OracleDbType.Int32).Direction = ParameterDirection.Output;
-                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2, 1000).Direction = ParameterDirection.Output;
 
                 await command.ExecuteNonQueryAsync();
 
