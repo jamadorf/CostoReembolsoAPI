@@ -38,11 +38,11 @@ namespace CostoReembolsoAPI.Controllers
 
                 command.Parameters.Add("OUT_CATEGORIA_SERVICIO", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_ESTATUS", OracleDbType.Int32).Direction = ParameterDirection.Output;
-                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2, 200).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
 
                 await command.ExecuteNonQueryAsync();
 
-                response.Estatus = int.Parse(command.Parameters["OUT_ESTATUS"].Value.ToString()!);
+                response.Estatus = ((OracleDecimal)command.Parameters["OUT_ESTATUS"].Value).ToInt32();
                 response.Mensaje = command.Parameters["OUT_MENSAJE"].Value.ToString()!;
 
                 DatosObjetoConsumido = $@"
@@ -57,7 +57,7 @@ namespace CostoReembolsoAPI.Controllers
                 if (response.Estatus == 0)
                 {
                     using var reader = ((OracleRefCursor)command.Parameters["OUT_CATEGORIA_SERVICIO"].Value).GetDataReader();
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                     {
                         response.CategoriasServicio.Add(new CategoriaServicioDto
                         {
@@ -92,6 +92,14 @@ namespace CostoReembolsoAPI.Controllers
         {
             var response = new TipoServicioResponseDto();
 
+            if (servicio <= 0)
+            {
+                response.Estatus = 1;
+                response.Mensaje = "El parámetro 'servicio' es obligatorio y debe tener un valor mayor que cero.";
+                response.TiposServicios = [];
+                return BadRequest(response);
+            }
+
             try
             {
                 using IDbConnection dbConnection = DbConnection;
@@ -103,11 +111,11 @@ namespace CostoReembolsoAPI.Controllers
 
                 command.Parameters.Add("OUT_TIPO_SERVICIO", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_ESTATUS", OracleDbType.Int32).Direction = ParameterDirection.Output;
-                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2, 200).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
 
                 await command.ExecuteNonQueryAsync();
 
-                response.Estatus = int.Parse(command.Parameters["OUT_ESTATUS"].Value.ToString()!);
+                response.Estatus = ((OracleDecimal)command.Parameters["OUT_ESTATUS"].Value).ToInt32();
                 response.Mensaje = command.Parameters["OUT_MENSAJE"].Value.ToString()!;
 
                 DatosObjetoConsumido = $@"
@@ -123,7 +131,7 @@ namespace CostoReembolsoAPI.Controllers
                 if (response.Estatus == 0)
                 {
                     using var reader = ((OracleRefCursor)command.Parameters["OUT_TIPO_SERVICIO"].Value).GetDataReader();
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                     {
                         response.TiposServicios.Add(new TipoServicioDto
                         {
@@ -158,6 +166,14 @@ namespace CostoReembolsoAPI.Controllers
         {
             var response = new ValidarCoberturaResponseDto();
 
+            if (servicio <= 0)
+            {
+                response.Estatus = 1;
+                response.Mensaje = "El parámetro 'servicio' es obligatorio y debe tener un valor mayor que cero.";
+                response.ServiciosTiposCobertura = [];
+                return BadRequest(response);
+            }
+
             try
             {
                 using IDbConnection dbConnection = DbConnection;
@@ -170,15 +186,15 @@ namespace CostoReembolsoAPI.Controllers
                 command.Parameters.Add("IN_TIPO_COBERTURA", OracleDbType.Int32).Value = tipoCobertura;
                 command.Parameters.Add("IN_COBERTURA", OracleDbType.Varchar2).Value = cobertura;
 
-                command.Parameters.Add("OUT_DESCRIPCION_CPT", OracleDbType.Varchar2, 200).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_DESCRIPCION_CPT", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_ESTATUS", OracleDbType.Int32).Direction = ParameterDirection.Output;
-                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2, 200).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_SERVICIO_TIPO_COBERTURA", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
 
                 await command.ExecuteNonQueryAsync();
 
-                response.Estatus = int.Parse(command.Parameters["OUT_ESTATUS"].Value.ToString()!);
-                response.Mensaje = command.Parameters["OUT_MENSAJE"].Value?.ToString() ?? string.Empty;
+                response.Estatus = ((OracleDecimal)command.Parameters["OUT_ESTATUS"].Value).ToInt32();
+                response.Mensaje = command.Parameters["OUT_MENSAJE"].Value.ToString()!;
                 response.DescripcionCPT = command.Parameters["OUT_DESCRIPCION_CPT"].Value?.ToString() ?? string.Empty;
 
                 DatosObjetoConsumido = $@"
@@ -200,26 +216,17 @@ namespace CostoReembolsoAPI.Controllers
                     {
                         response.ServiciosTiposCobertura = [];
 
-                        using (var reader = ((OracleRefCursor)command.Parameters["OUT_SERVICIO_TIPO_COBERTURA"].Value).GetDataReader())
+                        using var reader = ((OracleRefCursor)command.Parameters["OUT_SERVICIO_TIPO_COBERTURA"].Value).GetDataReader();
+                        while (await reader.ReadAsync())
                         {
-                            while (reader.Read())
+                            response.ServiciosTiposCobertura.Add(new ServicioTipoCoberturaDto
                             {
-                                response.ServiciosTiposCobertura.Add(new ServicioTipoCoberturaDto
-                                {
-                                    Servicio = reader.IsDBNull(0) ? 0 : Convert.ToInt32(reader.GetValue(0)),
-                                    DescripcionServicio = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
-                                    TipoCobertura = reader.IsDBNull(2) ? 0 : Convert.ToInt32(reader.GetValue(2)),
-                                    DescripcionTipoCobertura = reader.IsDBNull(3) ? string.Empty : reader.GetString(3)
-                                });
-                            }
+                                Servicio = reader.IsDBNull(0) ? 0 : Convert.ToInt32(reader.GetValue(0)),
+                                DescripcionServicio = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                                TipoCobertura = reader.IsDBNull(2) ? 0 : Convert.ToInt32(reader.GetValue(2)),
+                                DescripcionTipoCobertura = reader.IsDBNull(3) ? string.Empty : reader.GetString(3)
+                            });
                         }
-
-                        response.Mensaje = "CPT NO EXISTE EN LA CATEGORIA Y TIPO DE SERVICIO SELECCIONADO, PERO SI EN ESTAS DEL LISTADO.";
-                    }
-                    else
-                    {
-                        response.ServiciosTiposCobertura = [];
-                        response.Mensaje = "OK";
                     }
                 }
             }
@@ -244,7 +251,7 @@ namespace CostoReembolsoAPI.Controllers
         }
 
         [HttpGet("someter-cobertura")]
-        public async Task<IActionResult> CoberturaSometer([FromQuery] int servicio, [FromQuery] int tipoCobertura, [FromQuery] string cobertura, [FromQuery] decimal valorProveedorFueraRed)
+        public async Task<IActionResult> CoberturaSometer([FromQuery] int servicio, [FromQuery] int tipoCobertura, [FromQuery] string cobertura, [FromQuery] int valorProveedorFueraRed)
         {
             var response = new SometerCoberturaResponseDto();
             try
@@ -258,48 +265,39 @@ namespace CostoReembolsoAPI.Controllers
                 command.Parameters.Add("IN_SERVICIO", OracleDbType.Int32).Value = servicio;
                 command.Parameters.Add("IN_TIPO_COBERTURA", OracleDbType.Int32).Value = tipoCobertura;
                 command.Parameters.Add("IN_COBERTURA", OracleDbType.Varchar2).Value = cobertura;
-                command.Parameters.Add("IN_VALOR_PROVEEDOR_FUERA_RED", OracleDbType.Decimal).Value = valorProveedorFueraRed;
+                command.Parameters.Add("IN_VALOR_PROVEEDOR_FUERA_RED", OracleDbType.Int32).Value = valorProveedorFueraRed;
 
                 command.Parameters.Add("OUT_MATRIZ_COBERTURA", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
-                command.Parameters.Add("OUT_REEMBOLSO_PROV_FUERA_RED", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
-                command.Parameters.Add("OUT_COSTO_PROVEEDOR_FUERA_RED", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_REEMBOLSO_PROV_FUERA_RED", OracleDbType.Int32).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_COSTO_PROVEEDOR_FUERA_RED", OracleDbType.Int32).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_ESTATUS", OracleDbType.Int32).Direction = ParameterDirection.Output;
-                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2, 4000).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_MENSAJE", OracleDbType.Varchar2).Direction = ParameterDirection.Output;
 
                 await command.ExecuteNonQueryAsync();
 
-                response.Estatus = int.Parse(command.Parameters["OUT_ESTATUS"].Value.ToString()!);
+                response.Estatus = ((OracleDecimal)command.Parameters["OUT_ESTATUS"].Value).ToInt32();
                 response.Mensaje = command.Parameters["OUT_MENSAJE"].Value.ToString()!;
 
                 if (response.Estatus == 0)
                 {
-                    var matrizCobertura = new List<MatrizCoberturaDto>();
-
-                    if (command.Parameters["OUT_MATRIZ_COBERTURA"].Value is OracleRefCursor refCursor)
+                    List<MatrizCoberturaDto> matrizCobertura = [];
+         
+                    using var reader = ((OracleRefCursor)command.Parameters["OUT_MATRIZ_COBERTURA"].Value).GetDataReader();
+                    while (await reader.ReadAsync())
                     {
-                        using var reader = refCursor.GetDataReader();
-                        while (await reader.ReadAsync())
+                        matrizCobertura.Add(new MatrizCoberturaDto
                         {
-                            matrizCobertura.Add(new MatrizCoberturaDto
-                            {
-                                Tipo = reader.GetString(0),
-                                Minimo = reader.GetDecimal(1),
-                                Maximo = reader.GetDecimal(2),
-                                Average = reader.GetDecimal(3)
-                            });
-                        }
+                            Tipo = reader.GetString(0),
+                            Minimo = reader.GetDecimal(1),
+                            Maximo = reader.GetDecimal(2),
+                            Average = reader.GetString(3)
+                        });
                     }
 
                     response.MatrizCobertura = matrizCobertura;
 
-                    response.ReembolsoProveedorFueraRed = command.Parameters["OUT_REEMBOLSO_PROV_FUERA_RED"].Value?.ToString()!;
-                    response.CostoProveedorFueraRed = command.Parameters["OUT_COSTO_PROVEEDOR_FUERA_RED"].Value?.ToString()!;
-                }
-                else
-                {
-                    response.ReembolsoProveedorFueraRed = string.Empty;
-                    response.CostoProveedorFueraRed = string.Empty;
-                    response.MatrizCobertura = [];
+                    response.ReembolsoProveedorFueraRed = ((OracleDecimal)command.Parameters["OUT_REEMBOLSO_PROV_FUERA_RED"].Value).ToInt32();
+                    response.CostoProveedorFueraRed = ((OracleDecimal)command.Parameters["OUT_COSTO_PROVEEDOR_FUERA_RED"].Value).ToInt32();
                 }
 
                 DatosObjetoConsumido = $@"
