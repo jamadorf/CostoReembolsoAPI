@@ -25,7 +25,9 @@ namespace CostoReembolsoAPI.Controllers
         }
 
         [HttpGet("categorias-servicios")]
-        public async Task<IActionResult> ObtenerCategoriasServicio()
+        [ProducesResponseType(typeof(CategoriaServicioResponseDto), 200)]
+        [ProducesResponseType(500)]
+        public async Task<ActionResult<CategoriaServicioResponseDto>> ObtenerCategoriasServicio()
         {
             var response = new CategoriaServicioResponseDto();
 
@@ -88,7 +90,9 @@ namespace CostoReembolsoAPI.Controllers
         }
 
         [HttpGet("tipos-servicios")]
-        public async Task<IActionResult> ObtenerTiposServicio([FromQuery] int servicio)
+        [ProducesResponseType(typeof(TipoServicioResponseDto), 200)]
+        [ProducesResponseType(500)]
+        public async Task<ActionResult<TipoServicioResponseDto>> ObtenerTiposServicio([FromQuery] int servicio)
         {
             var response = new TipoServicioResponseDto();
 
@@ -162,7 +166,9 @@ namespace CostoReembolsoAPI.Controllers
         }
 
         [HttpGet("validar-cobertura")]
-        public async Task<IActionResult> ValidarCobertura([FromQuery] int servicio, [FromQuery] int tipoCobertura, [FromQuery] string cobertura)
+        [ProducesResponseType(typeof(ValidarCoberturaResponseDto), 200)]
+        [ProducesResponseType(500)]
+        public async Task<ActionResult<ValidarCoberturaResponseDto>> ValidarCobertura([FromQuery] int servicio, [FromQuery] int tipoCobertura, [FromQuery] string cobertura)
         {
             var response = new ValidarCoberturaResponseDto();
 
@@ -251,7 +257,9 @@ namespace CostoReembolsoAPI.Controllers
         }
 
         [HttpGet("someter-cobertura")]
-        public async Task<IActionResult> CoberturaSometer([FromQuery] int servicio, [FromQuery] int tipoCobertura, [FromQuery] string cobertura, [FromQuery] int valorProveedorFueraRed)
+        [ProducesResponseType(typeof(SometerCoberturaResponseDto), 200)]
+        [ProducesResponseType(500)]
+        public async Task<ActionResult<SometerCoberturaResponseDto>>  CoberturaSometer([FromQuery] int servicio, [FromQuery] int tipoCobertura, [FromQuery] string cobertura, [FromQuery] int valorProveedorFueraRed)
         {
             var response = new SometerCoberturaResponseDto();
             try
