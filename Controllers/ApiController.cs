@@ -267,7 +267,18 @@ namespace CostoReembolsoAPI.Controllers
                 command.Parameters.Add("IN_COBERTURA", OracleDbType.Varchar2, 20).Value = cobertura;
                 command.Parameters.Add("IN_VALOR_PROVEEDOR_FUERA_RED", OracleDbType.Int32).Value = valorProveedorFueraRed;
 
-                command.Parameters.Add("OUT_MATRIZ_COBERTURA", OracleDbType.RefCursor).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_LIMITE_MINIMO", OracleDbType.Int32).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_LIMITE_MAXIMO", OracleDbType.Int32).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_LIMITE_PROMEDIO", OracleDbType.Int32).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_COPAGO_MINIMO", OracleDbType.Int32).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_COPAGO_MAXIMO", OracleDbType.Int32).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_COPAGO_PROMEDIO", OracleDbType.Int32).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_PORCIENTO_COASEGURO_MINIMO", OracleDbType.Int32).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_PORCIENTO_COASEGURO_MAXIMO", OracleDbType.Int32).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_PORCIEN_COASEGURO_PROMEDIO", OracleDbType.Int32).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_MONTO_COASEGURO_MINIMO", OracleDbType.Int32).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_MONTO_COASEGURO_MAXIMO", OracleDbType.Int32).Direction = ParameterDirection.Output;
+                command.Parameters.Add("OUT_MONTO_COASEGURO_PROMEDIO", OracleDbType.Int32).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_REEMBOLSO_PROV_FUERA_RED", OracleDbType.Int32).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_COSTO_PROVEEDOR_FUERA_RED", OracleDbType.Int32).Direction = ParameterDirection.Output;
                 command.Parameters.Add("OUT_ESTATUS", OracleDbType.Int32).Direction = ParameterDirection.Output;
@@ -280,24 +291,24 @@ namespace CostoReembolsoAPI.Controllers
 
                 if (response.Estatus == 0)
                 {
-                    List<MatrizCoberturaDto> matrizCobertura = [];
-         
-                    using var reader = ((OracleRefCursor)command.Parameters["OUT_MATRIZ_COBERTURA"].Value).GetDataReader();
-                    while (await reader.ReadAsync())
-                    {
-                        matrizCobertura.Add(new MatrizCoberturaDto
-                        {
-                            Tipo = reader.GetString(0),
-                            Minimo = reader.GetDecimal(1),
-                            Maximo = reader.GetDecimal(2),
-                            Average = reader.GetString(3)
-                        });
-                    }
+                    response.LimiteMinimo = ((OracleDecimal)command.Parameters["OUT_LIMITE_MINIMO"].Value).Value;
+                    response.LimiteMaximo = ((OracleDecimal)command.Parameters["OUT_LIMITE_MAXIMO"].Value).Value;
+                    response.LimitePromedio = ((OracleDecimal)command.Parameters["OUT_LIMITE_PROMEDIO"].Value).Value;
 
-                    response.MatrizCobertura = matrizCobertura;
+                    response.CopagoMinimo = ((OracleDecimal)command.Parameters["OUT_COPAGO_MINIMO"].Value).Value;
+                    response.CopagoMaximo = ((OracleDecimal)command.Parameters["OUT_COPAGO_MAXIMO"].Value).Value;
+                    response.CopagoPromedio = ((OracleDecimal)command.Parameters["OUT_COPAGO_PROMEDIO"].Value).Value;
 
-                    response.ReembolsoProveedorFueraRed = ((OracleDecimal)command.Parameters["OUT_REEMBOLSO_PROV_FUERA_RED"].Value).ToInt32();
-                    response.CostoProveedorFueraRed = ((OracleDecimal)command.Parameters["OUT_COSTO_PROVEEDOR_FUERA_RED"].Value).ToInt32();
+                    response.PorcientoCoaseguroMinimo = ((OracleDecimal)command.Parameters["OUT_PORCIENTO_COASEGURO_MINIMO"].Value).Value;
+                    response.PorcientoCoaseguroMaximo = ((OracleDecimal)command.Parameters["OUT_PORCIENTO_COASEGURO_MAXIMO"].Value).Value;
+                    response.PorcientoCoaseguroPromedio = ((OracleDecimal)command.Parameters["OUT_PORCIEN_COASEGURO_PROMEDIO"].Value).Value;
+
+                    response.MontoCoaseguroMinimo = ((OracleDecimal)command.Parameters["OUT_MONTO_COASEGURO_MINIMO"].Value).Value;
+                    response.MontoCoaseguroMaximo = ((OracleDecimal)command.Parameters["OUT_MONTO_COASEGURO_MAXIMO"].Value).Value;
+                    response.MontoCoaseguroPromedio = ((OracleDecimal)command.Parameters["OUT_MONTO_COASEGURO_PROMEDIO"].Value).Value;
+
+                    response.ReembolsoProveedorFueraRed = ((OracleDecimal)command.Parameters["OUT_REEMBOLSO_PROV_FUERA_RED"].Value).Value;
+                    response.CostoProveedorFueraRed = ((OracleDecimal)command.Parameters["OUT_COSTO_PROVEEDOR_FUERA_RED"].Value).Value;
                 }
 
                 DatosObjetoConsumido = $@"
@@ -307,7 +318,6 @@ namespace CostoReembolsoAPI.Controllers
                                 IN_TIPO_COBERTURA => {tipoCobertura},
                                 IN_COBERTURA => '{cobertura}',
                                 IN_VALOR_PROVEEDOR_FUERA_RED => {valorProveedorFueraRed},
-                                OUT_MATRIZ_COBERTURA => :OUT_MATRIZ_COBERTURA,
                                 OUT_REEMBOLSO_PROV_FUERA_RED => '{response.ReembolsoProveedorFueraRed}',
                                 OUT_COSTO_PROVEEDOR_FUERA_RED => '{response.CostoProveedorFueraRed}',
                                 OUT_ESTATUS => {response.Estatus},
@@ -320,7 +330,6 @@ namespace CostoReembolsoAPI.Controllers
                 logService.RegistrarLog(Constants.SometerCobertura, "I", $"Error al ejecutar el procedimiento almacenado: {ex.Message} {DatosObjetoConsumido}", out transaccionId);
                 response.Estatus = 1;
                 response.Mensaje = Constants.ErrorLlamandoPlsql;
-                response.MatrizCobertura = [];
                 return StatusCode(500, response);
             }
             catch (Exception ex)
@@ -328,7 +337,6 @@ namespace CostoReembolsoAPI.Controllers
                 logService.RegistrarLog(Constants.SometerCobertura, "I", $"Error inesperado: {ex.Message} {DatosObjetoConsumido}", out transaccionId);
                 response.Estatus = 1;
                 response.Mensaje = Constants.ErrorInesperado;
-                response.MatrizCobertura = [];
                 return StatusCode(500, response);
             }
 
