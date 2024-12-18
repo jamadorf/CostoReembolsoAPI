@@ -259,7 +259,7 @@ namespace CostoReembolsoAPI.Controllers
         [HttpGet("someter-cobertura")]
         [ProducesResponseType(typeof(SometerCoberturaResponseDto), 200)]
         [ProducesResponseType(500)]
-        public async Task<ActionResult<SometerCoberturaResponseDto>>  CoberturaSometer([FromQuery] int servicio, [FromQuery] int tipoCobertura, [FromQuery] string cobertura, [FromQuery] int valorProveedorFueraRed)
+        public async Task<ActionResult<SometerCoberturaResponseDto>> CoberturaSometer([FromQuery] int servicio, [FromQuery] int tipoCobertura, [FromQuery] string cobertura, [FromQuery] decimal valorProveedorFueraRed)
         {
             var response = new SometerCoberturaResponseDto();
             try
@@ -352,6 +352,7 @@ namespace CostoReembolsoAPI.Controllers
         }
 
         [HttpGet("probar-conexion")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public IActionResult ProbarConexion()
         {
             try
